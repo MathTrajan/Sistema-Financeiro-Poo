@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro Pessoal</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+        h2 { color: #333; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #007bff; padding-bottom: 8px; }
+
+        /* Abas de navegação */
+        .nav-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #dee2e6; }
+        .nav-tab {
+            padding: 10px 24px; cursor: pointer; background: #e9ecef;
+            border: 1px solid #dee2e6; border-bottom: none; font-size: 15px;
+            border-radius: 5px 5px 0 0; color: #495057;
+        }
+        .nav-tab.active { background: white; color: #007bff; font-weight: bold; border-color: #dee2e6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards de resumo */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px; margin-bottom: 20px;
+        }
+        .stat {
+            background: white; padding: 15px; border-radius: 5px;
+            text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .stat-value { font-size: 22px; font-weight: bold; color: #007bff; }
+        .stat-value.negativo { color: #dc3545; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+
+        /* Seções */
+        .section {
+            background: white; padding: 20px; border-radius: 5px;
+            margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Formulário */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px; margin-bottom: 10px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #555; font-weight: bold; }
+        input, select {
+            padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 14px; font-family: Arial, sans-serif;
+        }
+        input:focus, select:focus {
+            outline: none; border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+        .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-row label { font-size: 14px; cursor: pointer; }
+
+        /* Botões */
+        button {
+            padding: 8px 16px; background: #007bff; color: white;
+            border: none; border-radius: 4px; cursor: pointer;
+            font-size: 14px; font-family: Arial, sans-serif;
+        }
+        button:hover { background: #0056b3; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #545b62; }
+        button.success { background: #28a745; }
+        button.success:hover { background: #218838; }
+        button.danger { background: #dc3545; padding: 4px 8px; font-size: 12px; }
+        button.danger:hover { background: #c82333; }
+        button.warning { background: #ffc107; color: #212529; padding: 4px 8px; font-size: 12px; }
+        button.warning:hover { background: #e0a800; }
+
+        /* Tabela */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th {
+            background: #f8f9fa; padding: 10px 8px; text-align: left;
+            font-weight: bold; border-bottom: 2px solid #dee2e6; white-space: nowrap;
+        }
+        td { padding: 8px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
+        tr:hover { background: #f8f9fa; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 11px; font-weight: bold;
+        }
+        .badge-sim { background: #d4edda; color: #155724; }
+        .badge-nao { background: #f8d7da; color: #721c24; }
+        .badge-vencido { background: #fff3cd; color: #856404; }
+
+        /* Filtro */
+        .filter-bar {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            align-items: flex-end; margin-bottom: 15px;
+        }
+        .filter-bar .form-group { min-width: 140px; }
+
+        /* Mensagem de feedback */
+        .msg {
+            padding: 12px; border-radius: 4px; margin-bottom: 15px; display: none;
+        }
+        .msg.show { display: block; }
+        .success-msg { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error-msg   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Impressão */
+        @media print {
+            .nav-tabs, #tab-lancamentos, .no-print { display: none !important; }
+            #tab-relatorio { display: block !important; }
+            .section { box-shadow: none; border: 1px solid #ddd; }
+            button { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>💰 Financeiro Pessoal</h1>
+    <div id="msg" class="msg"></div>
+
+    <!-- ABAS -->
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="trocarAba('lancamentos')">Lançamentos</div>
+        <div class="nav-tab" onclick="trocarAba('relatorio')">Relatório</div>
+    </div>
+
+    <!-- ============================== ABA: LANÇAMENTOS ============================== -->
+    <div id="tab-lancamentos" class="tab-content active">
+
+        <!-- RESUMO DO MÊS -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Receitas do Mês</div>
+                <div class="stat-value" id="totalReceitas">R$ 0,00</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Despesas do Mês</div>
+                <div class="stat-value" id="totalDespesas">R$ 0,00</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Saldo do Mês</div>
+                <div class="stat-value" id="saldo">R$ 0,00</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Total de Lançamentos</div>
+                <div class="stat-value" id="totalLancamentos">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">A Debitar</div>
+                <div class="stat-value" id="pendentes">0</div>
+            </div>
+        </div>
+
+        <!-- FORMULÁRIO: NOVO LANÇAMENTO -->
+        <div class="section">
+            <h2>Novo Lançamento</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Data do Movimento *</label>
+                    <input type="date" id="data" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Movimento *</label>
+                    <select id="tipo" required>
+                        <option value="">-- Selecione --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Descrição *</label>
+                    <input type="text" id="descricao" placeholder="Ex: Conta de luz de maio" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Valor (R$) *</label>
+                    <input type="number" id="valor" placeholder="0,00" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Forma de Pagamento *</label>
+                    <select id="forma" onchange="mostraBanco()" required>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="CARTAO">Cartão</option>
+                        <option value="PIX">PIX</option>
+                    </select>
+                </div>
+                <div class="form-group" id="grupoBanco" style="display:none;">
+                    <label>Banco *</label>
+                    <input type="text" id="banco" placeholder="Ex: Nubank, Bradesco">
+                </div>
+                <div class="form-group">
+                    <label>Qtd. Parcelas</label>
+                    <input type="number" id="parcelas" value="1" min="1" max="999">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Data de Vencimento</label>
+                    <input type="date" id="vencimento">
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <label>&nbsp;</label>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="debitado">
+                        <label for="debitado">Já foi debitado?</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <button onclick="adicionarLancamento()">+ Adicionar Lançamento</button>
+            </div>
+        </div>
+
+        <!-- TABELA DE LANÇAMENTOS -->
+        <div class="section">
+            <h2>Lista de Lançamentos</h2>
+            <div class="filter-bar">
+                <div class="form-group">
+                    <label>De</label>
+                    <input type="date" id="filtroInicio">
+                </div>
+                <div class="form-group">
+                    <label>Até</label>
+                    <input type="date" id="filtroFim">
+                </div>
+                <button onclick="filtrar()">Filtrar</button>
+                <button class="secondary" onclick="limparFiltros()">Limpar Filtro</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                            <th>Pagamento</th>
+                            <th>Banco</th>
+                            <th>Parcelas</th>
+                            <th>Vencimento</th>
+                            <th>Debitado?</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== ABA: RELATÓRIO ============================== -->
+    <div id="tab-relatorio" class="tab-content">
+        <div class="section no-print" style="margin-bottom:15px;">
+            <h2>Filtro do Relatório</h2>
+            <div class="filter-bar">
+                <div class="form-group">
+                    <label>De</label>
+                    <input type="date" id="relInicio">
+                </div>
+                <div class="form-group">
+                    <label>Até</label>
+                    <input type="date" id="relFim">
+                </div>
+                <button onclick="gerarRelatorio()">Gerar Relatório</button>
+                <button class="secondary" onclick="window.print()">🖨️ Imprimir</button>
+            </div>
+        </div>
+
+        <div id="relatorioConteudo" style="display:none;">
+            <!-- Cabeçalho do Relatório (visível na impressão) -->
+            <div class="section">
+                <h2 id="relTitulo">Relatório de Lançamentos</h2>
+
+                <!-- Resumo do período -->
+                <div class="stats" style="margin-bottom:20px;">
+                    <div class="stat">
+                        <div class="stat-label">Total Receitas</div>
+                        <div class="stat-value" id="relReceitas">R$ 0,00</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Total Despesas</div>
+                        <div class="stat-value" id="relDespesas">R$ 0,00</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Saldo</div>
+                        <div class="stat-value" id="relSaldo">R$ 0,00</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Lançamentos</div>
+                        <div class="stat-value" id="relTotal">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Debitados</div>
+                        <div class="stat-value" id="relDebitados">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Pendentes</div>
+                        <div class="stat-value" id="relPendentes">0</div>
+                    </div>
+                </div>
+
+                <!-- Tabela do relatório -->
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Pagamento</th>
+                                <th>Banco</th>
+                                <th>Parcelas</th>
+                                <th>Vencimento</th>
+                                <th>Debitado?</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaRelatorio"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="relatorioVazio" style="text-align:center; padding:40px; color:#666;">
+            Selecione um período e clique em <strong>Gerar Relatório</strong>.
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = '/api';
+
+    // ---- Navegação por abas ----
+    function trocarAba(nome) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + nome).classList.add('active');
+        document.querySelectorAll('.nav-tab')[nome === 'lancamentos' ? 0 : 1].classList.add('active');
+    }
+
+    // ---- Carregar tipos de movimento no <select> ----
+    async function carregarTipos() {
+        const res = await fetch(API + '/tipos-movimento');
+        const tipos = await res.json();
+        const sel = document.getElementById('tipo');
+        tipos.forEach(t => {
+            const op = document.createElement('option');
+            op.value = t.id;
+            op.textContent = t.nome;
+            sel.appendChild(op);
+        });
+    }
+
+    // ---- Mostrar/ocultar campo Banco conforme a forma de pagamento ----
+    function mostraBanco() {
+        const forma = document.getElementById('forma').value;
+        const grupo = document.getElementById('grupoBanco');
+        const campo = document.getElementById('banco');
+        if (['CARTAO', 'PIX'].includes(forma)) {
+            grupo.style.display = 'block';
+            campo.required = true;
+        } else {
+            grupo.style.display = 'none';
+            campo.required = false;
+            campo.value = '';
+        }
+    }
+
+    // ---- Formatar valor em Real ----
+    function fmt(v) {
+        return 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ---- Formatar data dd/mm/aaaa ----
+    function fmtData(iso) {
+        if (!iso) return '-';
+        const [a, m, d] = iso.split('-');
+        return `${d}/${m}/${a}`;
+    }
+
+    function ehReceita(lancamento) {
+        return ['salário', 'freelance'].includes((lancamento.tipoMovimentoNome || '').toLowerCase());
+    }
+
+    function estaNoMesAtual(dataIso) {
+        if (!dataIso) return false;
+        const hoje = new Date();
+        const [ano, mes] = dataIso.split('-').map(Number);
+        return ano === hoje.getFullYear() && mes === (hoje.getMonth() + 1);
+    }
+
+    function calcularResumoLocal(lancamentos) {
+        const lancamentosMes = lancamentos.filter(l => estaNoMesAtual(l.dataMovimento));
+        const totalReceitas = lancamentosMes
+            .filter(ehReceita)
+            .reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+        const totalDespesas = lancamentosMes
+            .filter(l => !ehReceita(l))
+            .reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+        const quantidadeLancamentos = lancamentosMes.length;
+        const pendentes = lancamentosMes.filter(l => !l.debitado).length;
+
+        return {
+            totalReceitas,
+            totalDespesas,
+            saldo: totalReceitas - totalDespesas,
+            quantidadeLancamentos,
+            lancamentosPendentes: pendentes
+        };
+    }
+
+    function aplicarResumoNosKpis(resumo) {
+        document.getElementById('totalReceitas').textContent = fmt(resumo.totalReceitas);
+        document.getElementById('totalDespesas').textContent = fmt(resumo.totalDespesas);
+        const elSaldo = document.getElementById('saldo');
+        elSaldo.textContent = fmt(resumo.saldo);
+        elSaldo.className = 'stat-value' + (resumo.saldo < 0 ? ' negativo' : '');
+        document.getElementById('totalLancamentos').textContent = resumo.quantidadeLancamentos || 0;
+        document.getElementById('pendentes').textContent = resumo.lancamentosPendentes || 0;
+    }
+
+    function atualizarCardsResumo(lancamentos) {
+        aplicarResumoNosKpis(calcularResumoLocal(lancamentos));
+    }
+
+    async function carregarDashboard(lancamentos) {
+        try {
+            const resumoLocal = calcularResumoLocal(lancamentos);
+            const res = await fetch(API + '/dashboard');
+            if (!res.ok) throw new Error('Falha ao buscar dashboard');
+
+            const resumo = await res.json();
+            const resumoApi = {
+                totalReceitas: parseFloat(resumo.totalReceitas || 0),
+                totalDespesas: parseFloat(resumo.totalDespesas || 0),
+                saldo: parseFloat(resumo.totalReceitas || 0) - parseFloat(resumo.totalDespesas || 0),
+                quantidadeLancamentos: resumo.quantidadeLancamentos || 0,
+                lancamentosPendentes: resumo.lancamentosPendentes || 0
+            };
+
+            const deveUsarResumoLocal =
+                resumoApi.quantidadeLancamentos === 0 && resumoLocal.quantidadeLancamentos > 0;
+
+            aplicarResumoNosKpis(deveUsarResumoLocal ? resumoLocal : resumoApi);
+        } catch (_) {
+            atualizarCardsResumo(lancamentos);
+        }
+    }
+
+    // ---- Renderizar uma linha de lançamento na tabela ----
+    function criarLinha(l, comAcoes) {
+        const tr = document.createElement('tr');
+        const debitadoBadge = l.debitado
+            ? '<span class="badge badge-sim">Sim</span>'
+            : '<span class="badge badge-nao">Não</span>';
+        const vencidoBadge = l.vencido
+            ? ' <span class="badge badge-vencido">Vencido</span>'
+            : '';
+
+        let acoes = '';
+        if (comAcoes) {
+            acoes = `<td>
+                ${!l.debitado ? `<button class="warning" onclick="marcarDebitado(${l.id})">✓ Debitar</button> ` : ''}
+                <button class="danger" onclick="excluir(${l.id})">Excluir</button>
+            </td>`;
+        }
+
+        tr.innerHTML = `
+            <td>${fmtData(l.dataMovimento)}</td>
+            <td>${l.tipoMovimentoNome}</td>
+            <td>${l.descricao}</td>
+            <td>${fmt(l.valor)}</td>
+            <td>${l.formaPagamento}</td>
+            <td>${l.banco || '-'}</td>
+            <td>${l.quantidadeParcelas || 1}x</td>
+            <td>${fmtData(l.dataVencimento)}${vencidoBadge}</td>
+            <td>${debitadoBadge}</td>
+            ${acoes}
+        `;
+        return tr;
+    }
+
+    // ---- Carregar todos os lançamentos e atualizar o resumo ----
+    async function carregar() {
+        const res = await fetch(API + '/lancamentos');
+        const lancamentos = await res.json();
+
+        const tbody = document.getElementById('tabela');
+        tbody.innerHTML = '';
+        lancamentos.forEach(l => tbody.appendChild(criarLinha(l, true)));
+
+        await carregarDashboard(lancamentos);
+    }
+
+    // ---- Filtrar lançamentos por período ----
+    async function filtrar() {
+        const inicio = document.getElementById('filtroInicio').value;
+        const fim = document.getElementById('filtroFim').value;
+        if (!inicio || !fim) { mostrarMsg('Selecione o período de início e fim.', false); return; }
+
+        const res = await fetch(`${API}/lancamentos?dataInicio=${inicio}&dataFim=${fim}`);
+        const lancamentos = await res.json();
+
+        const tbody = document.getElementById('tabela');
+        tbody.innerHTML = '';
+        lancamentos.forEach(l => tbody.appendChild(criarLinha(l, true)));
+    }
+
+    function limparFiltros() {
+        document.getElementById('filtroInicio').value = '';
+        document.getElementById('filtroFim').value = '';
+        carregar();
+    }
+
+    // ---- Adicionar novo lançamento ----
+    async function adicionarLancamento() {
+        const data     = document.getElementById('data').value;
+        const tipoId   = document.getElementById('tipo').value;
+        const descricao = document.getElementById('descricao').value.trim();
+        const valor    = document.getElementById('valor').value;
+        const forma    = document.getElementById('forma').value;
+        const banco    = document.getElementById('banco').value.trim();
+        const parcelas = parseInt(document.getElementById('parcelas').value) || 1;
+        const vencimento = document.getElementById('vencimento').value;
+        const debitado = document.getElementById('debitado').checked;
+
+        if (!data || !tipoId || !descricao || !valor) {
+            mostrarMsg('Preencha os campos obrigatórios: Data, Tipo, Descrição e Valor.', false);
+            return;
+        }
+        if (['CARTAO', 'PIX'].includes(forma) && !banco) {
+            mostrarMsg('Informe o banco para pagamentos com ' + forma + '.', false);
+            return;
+        }
+
+        const body = {
+            dataMovimento: data,
+            tipoMovimentoId: Number(tipoId),
+            descricao,
+            valor: parseFloat(valor),
+            formaPagamento: forma,
+            banco: banco || null,
+            quantidadeParcelas: parcelas,
+            dataVencimento: vencimento || null,
+            debitado
+        };
+
+        try {
+            const res = await fetch(API + '/lancamentos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                mostrarMsg('Lançamento adicionado com sucesso!', true);
+                // Limpar formulário
+                document.getElementById('data').value = '';
+                document.getElementById('tipo').value = '';
+                document.getElementById('descricao').value = '';
+                document.getElementById('valor').value = '';
+                document.getElementById('banco').value = '';
+                document.getElementById('parcelas').value = '1';
+                document.getElementById('vencimento').value = '';
+                document.getElementById('debitado').checked = false;
+                document.getElementById('grupoBanco').style.display = 'none';
+                carregar();
+            } else {
+                const err = await res.json();
+                mostrarMsg(err.erro || 'Erro ao adicionar lançamento.', false);
+            }
+        } catch (e) {
+            mostrarMsg('Erro de conexão: ' + e.message, false);
+        }
+    }
+
+    // ---- Marcar lançamento como debitado ----
+    async function marcarDebitado(id) {
+        const res = await fetch(`${API}/lancamentos/${id}/debitado`, { method: 'PATCH' });
+        if (res.ok) { mostrarMsg('Marcado como debitado!', true); carregar(); }
+        else mostrarMsg('Erro ao marcar como debitado.', false);
+    }
+
+    // ---- Excluir lançamento ----
+    async function excluir(id) {
+        if (!confirm('Tem certeza que deseja remover este lançamento?')) return;
+        const res = await fetch(`${API}/lancamentos/${id}`, { method: 'DELETE' });
+        if (res.ok) { mostrarMsg('Lançamento removido!', true); carregar(); }
+        else mostrarMsg('Erro ao remover.', false);
+    }
+
+    // ---- Gerar relatório ----
+    async function gerarRelatorio() {
+        const inicio = document.getElementById('relInicio').value;
+        const fim    = document.getElementById('relFim').value;
+        if (!inicio || !fim) { mostrarMsg('Selecione o período do relatório.', false); return; }
+
+        const res = await fetch(`${API}/relatorio?dataInicio=${inicio}&dataFim=${fim}`);
+        const data = await res.json();
+        const { lancamentos, resumo } = data;
+
+        document.getElementById('relTitulo').textContent =
+            `Relatório de Lançamentos — ${fmtData(inicio)} a ${fmtData(fim)}`;
+
+        document.getElementById('relReceitas').textContent  = fmt(resumo.totalReceitas);
+        document.getElementById('relDespesas').textContent  = fmt(resumo.totalDespesas);
+        const saldo = parseFloat(resumo.totalReceitas) - parseFloat(resumo.totalDespesas);
+        document.getElementById('relSaldo').textContent     = fmt(saldo);
+        document.getElementById('relTotal').textContent     = resumo.quantidadeLancamentos;
+        document.getElementById('relDebitados').textContent = resumo.quantidadeDebitados;
+        document.getElementById('relPendentes').textContent = resumo.lancamentosPendentes;
+
+        const tbody = document.getElementById('tabelaRelatorio');
+        tbody.innerHTML = '';
+        lancamentos.forEach(l => tbody.appendChild(criarLinha(l, false)));
+
+        document.getElementById('relatorioConteudo').style.display = 'block';
+        document.getElementById('relatorioVazio').style.display = 'none';
+    }
+
+    // ---- Mostrar mensagem de feedback ----
+    function mostrarMsg(texto, sucesso) {
+        const div = document.getElementById('msg');
+        div.className = 'msg show ' + (sucesso ? 'success-msg' : 'error-msg');
+        div.textContent = texto;
+        setTimeout(() => div.classList.remove('show'), 4000);
+    }
+
+    // ---- Inicialização ----
+    window.addEventListener('load', () => {
+        const hoje = new Date();
+        // Define data padrão do formulário como hoje
+        document.getElementById('data').valueAsDate = hoje;
+
+        // Pré-preenche filtro com o mês atual
+        const primDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        document.getElementById('filtroInicio').valueAsDate = primDia;
+        document.getElementById('filtroFim').valueAsDate    = hoje;
+
+        // Pré-preenche filtro do relatório com o mês atual
+        document.getElementById('relInicio').valueAsDate = primDia;
+        document.getElementById('relFim').valueAsDate    = hoje;
+
+        carregarTipos();
+        carregar();
+    });
+</script>
+</body>
+</html>
